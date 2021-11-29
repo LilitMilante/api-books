@@ -21,8 +21,22 @@ func NewServer(p string, r *mux.Router, s *database.Storage) *Server {
 	}
 }
 
+func (s *Server) cors(nextHandler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+
+		if r.Method == http.MethodOptions {
+			return
+		}
+
+		nextHandler.ServeHTTP(w, r)
+	})
+}
+
 func (s *Server) Start() error {
-	s.router.HandleFunc("/books", s.getBooks).Methods(http.MethodGet)
+	s.router.Use(s.cors)
+
+	s.router.HandleFunc("/books", s.getBooks).Methods(http.MethodGet).Queries("aid", "{aid:[0-9]+}")
 	s.router.HandleFunc("/books", s.createBook).Methods(http.MethodPost)
 	s.router.HandleFunc("/books/{id}", s.updateBook).Methods(http.MethodPut)
 	s.router.HandleFunc("/books/{id}", s.deleteBook).Methods(http.MethodDelete)

@@ -1,6 +1,9 @@
 package database
 
-import "errors"
+import (
+	"database/sql"
+	"errors"
+)
 
 func (s *Storage) Books() ([]Book, error) {
 	books := make([]Book, 0)
@@ -109,4 +112,47 @@ func (s *Storage) AddBooks(books []Book) error {
 	}
 
 	return nil
+}
+
+func (s *Storage) BooksByAuthorId(id int64) ([]Book, error) {
+	books := make([]Book, 0)
+
+	rows, err := s.conn.Query(
+		`
+				select b.id, 
+				       b.title, 
+				       a.id, 
+				       a.firstname, 
+				       a.lastname
+				from books b 
+				join authors a on a.id = b.author_id
+				where a.id = $1
+				       `,
+		id,
+	)
+
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return []Book{}, err
+		}
+
+		return books, nil
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var b Book
+		if err := rows.Scan(&b.ID, &b.Title, &b.Author.ID, &b.Author.Firstname, &b.Author.Lastname); err != nil {
+			break
+		}
+
+		books = append(books, b)
+	}
+
+	if err = rows.Err(); err != nil {
+		return []Book{}, err
+	}
+
+	return books, nil
 }

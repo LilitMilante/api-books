@@ -11,13 +11,29 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (s *Server) getBooks(w http.ResponseWriter, _ *http.Request) {
-	books, err := s.store.Books()
-	if err != nil {
-		log.Println("Get books:", err)
-		w.WriteHeader(http.StatusInternalServerError)
+func (s *Server) getBooks(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	books := make([]database.Book, 0)
+	var err error
 
-		return
+	aID, ok := params["aid"]
+	if !ok {
+		books, err = s.store.Books()
+		if err != nil {
+			log.Println("Get books:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+	} else {
+		aIDint, _ := strconv.Atoi(aID)
+		books, err = s.store.BooksByAuthorId(int64(aIDint))
+		if err != nil {
+			log.Println("Get books:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
